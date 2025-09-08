@@ -1,0 +1,439 @@
+---
+title: "What makes a Halloween Candy Desirable?"
+author: "Anav Vora and Lavanya Kudli"
+date: "10/28/2024"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+\textbf{\textcolor{blue}{Introduction}}
+
+Halloween candy is a beloved treat enjoyed by both children and adults alike making it a fascinating subject for statistical analysis. To understand drivers of consumer preferences with respect to Halloween candy,FiveThirtyEight conducted a survey by generating an extensive dataset through 269,000 match-ups between various candies, garnering 8,371 survey responses. This dataset also includes a computed win percentage (referred to as winpercent) for each candy, reflecting the proportion of wins it achieved in these match-ups. Corresponding to the win percentages, the presence of ten relevant variables in the candy, such as, chocolate, fruity, caramel, peanutalmondy, nougat, crispedricewafer, hard, bar, pluribus, and sugarpercent are also available at our disposal.
+
+We are motivated to identify and understand the specific characteristics that make a Halloween candy desirable. Using the winpercent as the response and the 10 variables as the predictors we will utilize statistical data analysis techniques for a multiple linear regression framework to identify characteristics that are most strongly associated with consumer preference for Halloween candy.For all our analysis we selected 0.05 as the alpha.
+
+\medskip
+\textbf{\textcolor{blue}{Data Description}}
+
+After thoroughly verifying the data to ensure absence of missing values we begin the necessary data exploration which is an essential step before conducting statistical modelling.
+
+To conduct exploratory data analysis, we construct histograms to understand the distribution of qualities that might be influencing the desirability of Halloween candy. 
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+Candy_Data = read.csv("candy-data.csv")
+#we create a subset to remove the candy name column
+Candy_Data_Subset = Candy_Data[,-c(1,12)]
+Candy_Data_Subset[,c(1:9)] <- lapply(Candy_Data_Subset[,c(1:9)], as.factor)
+library(ggplot2)
+library(ggpubr)
+f1 <- ggplot(Candy_Data_Subset,aes(x=chocolate))+geom_bar()
+f2 <- ggplot(Candy_Data_Subset,aes(x=fruity))+geom_bar()
+f3 <- ggplot(Candy_Data_Subset,aes(x=caramel))+geom_bar()
+f4 <- ggplot(Candy_Data_Subset,aes(x=peanutyalmondy))+geom_bar()
+f5 <- ggplot(Candy_Data_Subset,aes(x=nougat))+geom_bar()
+f6 <- ggplot(Candy_Data_Subset,aes(x=crispedricewafer))+geom_bar()
+f7 <- ggplot(Candy_Data_Subset,aes(x=hard))+geom_bar()
+f8 <- ggplot(Candy_Data_Subset,aes(x=bar))+geom_bar()
+f9 <- ggplot(Candy_Data_Subset,aes(x=pluribus))+geom_bar()
+f10 <- ggplot(Candy_Data_Subset,aes(x=sugarpercent))+geom_histogram()
+f11 <- ggplot(Candy_Data_Subset,aes(x=winpercent))+geom_histogram()
+ggarrange(f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,nrow=4,ncol=3)
+```
+
+We see that very few of the candies in the dataset include caramel, peanuts/almonds, nougat, and crisped rice/wafer in the ingredient list. Further, there are very few hard candies and candy bars in the dataset. Thus, we should use caution when interpreting the influence of the above mentioned ingredients and qualities on candy desirability, as there is lack of data in our sample recording candy desirability in the presence of caramel,peanuts/almonds,nougat,crisped rice/wafer, hard and bar type candy. 
+
+Winpercent looks normally distributed, but may have bimodality. Sugarpercent also looks normally distributed, but there are no candies within certain ranges of sugar percent in the data. 
+
+\medskip
+\textbf{\textcolor{blue}{Model Fitting}}
+
+We fit a multiple linear regression model to examine the relationship between candy qualities and desirability computed using the winpercent.
+
+```{r,warning=FALSE,message=FALSE}
+Candy.mlr = lm(winpercent~.,data=Candy_Data_Subset)
+summary(Candy.mlr)
+```
+
+The MLR model can be written as:
+winpercent = 33.262 + 19.216chocolate + 9.587fruity + 1.982caramel + 9.454peanutyalmondy + 1.918nougat + 8.637crispedricewafer - 5.866hard - 1.233bar - 1.147pluribus + 7.490sugarpercent
+
+Before making interpretations from the model, we must perform diagnostics and check if there are any unusual observations in the data.
+
+We begin by checking if there are any high leverage points, i.e., if there are any data points that are very far from the center of the whole sample. To do so we perform the following steps:
+
+1) We identify the leverages that are higher than the 2p/n threshold
+
+2) For any leverages obtained, we classify these high leverage points between good or bad. Good high-leverage points are the ones for which the y value follows the pattern of the rest of the data, but with an xi value that is far away from the sample mean, whereas bad high-leverage points are the ones for which the y value does not follow the pattern suggested by the rest of the data, so the LS fitting might change a lot if we remove this point.
+
+3) Then we estimate the IQR for our dependent variable, winpercent, in our original (full) data frame and use this metric to identify the high-leverage observations that don’t follow the pattern of the data.
+
+```{r,warning=FALSE,message=FALSE}
+candy.leverages = lm.influence(Candy.mlr)$hat
+n=dim(Candy_Data_Subset)[1]
+p=length(variable.names(Candy.mlr))
+candy.leverages.high = candy.leverages[candy.leverages>2*p/n]
+candy.leverages.high 
+```
+
+We observe 3 points with high leverage which must be classified into into good and bad.
+
+```{r,warning=FALSE,message=FALSE}
+library(faraway)
+halfnorm(candy.leverages, nlab=6, labs=as.character(1:length(candy.leverages)), ylab="Leverages") 
+```
+
+In the plot above we see that none of the leverages seems to be unusually large. 
+
+Next we classify the leverages into good and bad
+
+```{r,warning=FALSE,message=FALSE}
+#Calculate the IQR for the dependent variable 
+IQR_win = IQR(Candy_Data_Subset$winpercent)
+
+#Define a range with its lower limit being (Q1 - IQR) and upper limit being (Q3 + IQR) 
+QT1_win = quantile(Candy_Data_Subset$winpercent,0.25)
+QT3_win = quantile(Candy_Data_Subset$winpercent,0.75)
+
+lower_lim_win = QT1_win - IQR_win
+upper_lim_win= QT3_win + IQR_win
+
+vector_lim_win = c(lower_lim_win,upper_lim_win)
+
+# Extract observations with high leverage points from the original data frame 
+candy.highlev = Candy_Data_Subset[candy.leverages>2*p/n,]
+
+# Select only the observations with leverage points outside the range
+candy.highlev_lower = candy.highlev[candy.highlev$winpercent < vector_lim_win[1], ]
+candy.highlev_upper = candy.highlev[candy.highlev$winpercent > vector_lim_win[2], ]
+candy.highlev2 = rbind(candy.highlev_lower,candy.highlev_upper)
+candy.highlev2
+```
+
+Based on our analysis we can conclude that none of our observations are bad leverage points.
+
+Next, we examine using the outlier test if there are points which do not fit the model as well as others. For this we compare our studentized residual with bonferroni corrected values to be certain that the overall type I error rate is no greater than $\alpha$. When doing so, each case would be tested at level $\alpha$/n where n is total number of observations.
+
+```{r,warning=FALSE,message=FALSE}
+#Outlier detection
+candy.resid = rstudent(Candy.mlr)
+candy.resid.sorted = sort(abs(candy.resid), decreasing=TRUE)[1:10]
+candy.resid.sorted
+
+bonferroni_cv = qt(.05/(2*n), n-p-1) 
+bonferroni_cv
+```
+
+From our analysis, we can conclude that there are no outliers in the dataset as even the largest studentized resiudal, which in our case is 2.402, is not larger than abs(bonferroni cv) which is 3.594.
+
+Finally, we check if there are any observations whose removal greatly affects the regression analysis i.e., influential points
+
+```{r,warning=FALSE,message=FALSE}
+#Influential observations
+candy.cooks = cooks.distance(Candy.mlr)
+sort(candy.cooks, decreasing = TRUE)[1:10]
+```
+
+Since none of the cooks distance is above 1, therefore we can say that there are no influential points in the data.
+
+Overall, from all our analyses we do not observe any bad high leverage points, outliers, and influential observations.
+
+Therefore,we can proceed to model assumption, i.e., check if any of the assumptions of MLR are violated. 
+
+We begin by examining if the variance of the residuals is constant.
+To do so we will plot residuals versus fitted values. We will also verify this using the BP test.
+
+```{r,warning=FALSE,message=FALSE}
+plot(Candy.mlr,which=1) #Shows variance is constant
+library(lmtest)
+bptest(Candy.mlr) 
+```
+
+Since the residuals look like a football-shaped cloud, we can say that the variance is constant. So we do not need to do variance stabilization. To verify this we also do the Breusch-Pagan Test.
+
+The hypothesis for the BP test is, 
+
+H0 :the variance is constant
+
+H$\alpha$: the variance is not constant
+
+Since the p-value is greater than 0.05, we fail to reject the null and conclude that the variance is constant.
+
+Next, we check if the error terms are normally distributed by using the following two approaches:-
+
+1) a Q-Q plot
+
+2) a KS test since our n>50
+
+```{r,warning=FALSE,message=FALSE}
+plot(Candy.mlr,which=2) 
+ks.test(Candy.mlr$residuals,"pnorm") #Normality violated 
+```
+
+From the Q-Q test we see that there is a slight departure from normality at the lower end. 
+
+We also do the KS test with the below hypothesis:
+
+H0: the distribution is normal
+
+H$\alpha$: the distribution is not normal
+
+The p-value of 3.997e-14 is less than 0.05. So, we reject the null hypotheses of normality and conclude that the normality assumption is not satisfied.
+
+As the normality assumption is violated we try a box-cox transformation.
+
+```{r,warning=FALSE,message=FALSE}
+library(MASS)
+Candy.transformation = boxcox(Candy.mlr, lambda=seq(-2,2, length=400))
+```
+
+From the box-cox results, we see that the optimal lambda is close to 1 and that 1 is in the 95% interval. So we can proceed without any transformation.
+
+We do not need to check for independence of error terms (i.e., correlation) as the data we have is not collected in an ordered sequence.
+
+We next check if the assumption of a linear dependence is satisfied. We only do this for continuous data. Our sample includes only one continuously distributed predictor - sugar percentage. 
+
+```{r,warning=FALSE,message=FALSE}
+y.sugarpercent = lm(winpercent~chocolate+fruity+caramel+peanutyalmondy+nougat+
+                      crispedricewafer+hard+bar+pluribus,data=Candy_Data_Subset)$residuals
+x.sugarpercent = lm(sugarpercent~chocolate+fruity+caramel+peanutyalmondy+nougat+
+                      crispedricewafer+hard+bar+pluribus,data=Candy_Data_Subset)$residuals
+plot(x.sugarpercent, y.sugarpercent, xlab="Sugar Percent Residuals", ylab="WinPercent Residuals", 
+     col='Darkblue', pch=3, size=3)
+abline(lm(y.sugarpercent ~ x.sugarpercent), col='Darkblue', lwd=2)
+abline(v = 0, col="red", lty=3)
+abline(h = 0, col="red", lty=3)
+```
+
+Since the points appear to be randomly scattered around the fitted regression line, so the linearity assumption is satisfied here.
+
+We do not need to check for collinearity in the predictors as we only have one continuously distributed predictor in the design matrix.
+
+As none of the assumptions for MLR are violated, we can start fine-tuning the model to retain only statistically significant predictors. We take a backward selection approach, i.e., we start dropping variables from the full model in order of decreasing p-value (of t-tests in the full model). After each drop of variables, we perform a partial anova test, and compare the reduced models with the full model (that includes all the variables).
+
+We begin by dropping the predictor "bar" which has the highest p-value of 0.799 in the full model (through a t-test for individual betas)
+
+We perform partial F-tests for dropping each predictor. We use the following generic form of the hypothesis test for all fine tuning.
+
+Hypotheses:
+
+H0: $\beta_i = \beta_j =... =\beta_k = 0$
+
+H$\alpha$: Atleast one of $\beta_i$, $\beta_j$, ... $\beta_k$ is not equal to zero
+
+where i, j,..., k are the predictors being dropped together. One or more predictors can be dropped together from the full model.
+
+Decision rule: If the p-value is less than 0.05 then reject the null hypothesis.
+
+```{r,warning=FALSE,message=FALSE}
+#Dropping bar
+candy.red1 = lm(winpercent ~ chocolate + fruity + caramel + peanutyalmondy + nougat + 
+                  crispedricewafer + hard + pluribus + sugarpercent,
+                data=Candy_Data_Subset)
+anova(candy.red1,Candy.mlr) 
+```
+
+The p-value obtained is 0.799 (> 0.05), therefore we fail to reject the null that $\beta_{bar}$ = 0, hence we can drop the predictor bar. 
+We can now examine if we can drop nougat also along with bar
+
+```{r,warning=FALSE,message=FALSE}
+#Dropping nougat (next largest p value) and bar together
+candy.red2 = lm(winpercent ~ chocolate + fruity + caramel + peanutyalmondy + 
+                  crispedricewafer + hard + pluribus + sugarpercent ,
+                data=Candy_Data_Subset)
+anova(candy.red2,Candy.mlr)
+```
+
+The p-value obtained is 0.939 (> 0.05), therefore we fail to reject the null that $\beta_{bar}$ = $\beta_{nougat}$ = 0, hence we can drop the predictors bar and nougat. 
+
+We can now examine if we can drop pluribus along with nougat and bar
+
+```{r}
+#Now dropping pluribus also (next largest p value)
+candy.red3 = lm(winpercent ~ chocolate + fruity + caramel + peanutyalmondy +
+                  crispedricewafer + hard + sugarpercent
+                ,data=Candy_Data_Subset)
+anova(candy.red3,Candy.mlr)
+```
+
+The p-value obtained is 0.967 (> 0.05), therefore we fail to reject the null that $\beta_{bar}$ = $\beta_{nougat}$ = $\beta_{pluribus}$ = 0, hence we can drop the predictors bar, nougat, and pluribus. 
+
+Next we examine if we can drop caramel also 
+
+```{r}
+#Now dropping caramel also (next largest p value)
+candy.red4 = lm(winpercent ~ chocolate + fruity + peanutyalmondy +
+                  crispedricewafer + hard + sugarpercent ,
+                data=Candy_Data_Subset)
+anova(candy.red4,Candy.mlr)
+```
+
+The p-value obtained is 0.939 (> 0.05), therefore we fail to reject the null that $\beta_{bar}$ = $\beta_{nougat}$ = $\beta_{pluribus}$ = $\beta_{caramel}$ = 0, hence we can drop the predictors bar, nougat, pluribus, and caramel. 
+
+Checking now if crispedricewafer can also be dropped
+
+```{r}
+#Now dropping crispedricewafer also (next largest p value)
+candy.red5 = lm(winpercent ~ chocolate + fruity + peanutyalmondy +
+                  hard + sugarpercent
+                ,data=Candy_Data_Subset)
+anova(candy.red5,Candy.mlr)
+```
+
+The p-value obtained is 0.533 (> 0.05), therefore we fail to reject the null that $\beta_{bar}$ = $\beta_{nougat}$ = $\beta_{pluribus}$ = $\beta_{caramel}$ = $\beta_{crispedricewafer}$ = 0, hence we can drop the predictors bar, nougat, pluribus, caramel, and crispedricewafer. 
+
+Now checking if we can drop sugarpercent as a predictor too
+
+```{r}
+#Now dropping sugarpercent also (next largest p value)
+candy.red6 = lm(winpercent ~ chocolate + fruity + peanutyalmondy +
+                  hard,data=Candy_Data_Subset)
+anova(candy.red6,Candy.mlr)
+```
+
+The p-value obtained is 0.244 (> 0.05), therefore we fail to reject the null that $\beta_{bar}$ = $\beta_{nougat}$ = $\beta_{pluribus}$ = $\beta_{caramel}$ = $\beta_{crispedricewafer}$ = $\beta_{sugarpercent}$ = 0, hence we can drop the predictors bar, nougat, pluribus, caramel, crispedricewafer, and sugarpercent. 
+
+Testing if hard can be dropped as well
+
+```{r}
+#Now dropping hard also (next largest p value)
+candy.red7 = lm(winpercent ~ chocolate + fruity + peanutyalmondy ,data=Candy_Data_Subset)
+anova(candy.red7,Candy.mlr)
+```
+
+The p-value obtained is 0.185 (> 0.05), therefore we fail to reject the null that $\beta_{bar}$ = $\beta_{nougat}$ = $\beta_{pluribus}$ = $\beta_{caramel}$ = $\beta_{crispedricewafer}$ = $\beta_{sugarpercent}$ = $\beta_{hard}$= 0, hence we can drop the predictors bar, nougat, pluribus, caramel, crispedricewafer, sugarpercent, and hard. 
+
+Testing if we can drop fruity also next
+
+```{r}
+#Now dropping fruity also (next largest p value)
+candy.red8 = lm(winpercent ~ chocolate + peanutyalmondy, data=Candy_Data_Subset)
+anova(candy.red8,Candy.mlr) 
+```
+
+The p-value obtained is 0.073 (> 0.05), therefore we fail to reject the null that $\beta_{bar}$ = $\beta_{nougat}$ = $\beta_{pluribus}$ = $\beta_{caramel}$ = $\beta_{crispedricewafer}$ = $\beta_{sugarpercent}$ = $\beta_{hard}$= $\beta_{fruity}$= 0, hence we can drop the predictors bar, nougat, pluribus, caramel, crispedricewafer, sugarpercent,hard, and fruity. 
+
+Finally we check if we can drop peanutyalmondy also
+
+```{r}
+#Now dropping peanutyalmondy also (next largest p value)
+candy.red9 = lm(winpercent ~ chocolate, data=Candy_Data_Subset)
+anova(candy.red9,Candy.mlr) 
+```
+
+We see that the p-value obtained is 0.027 (< 0.05), therefore we reject the null that $\beta_{bar}$ = $\beta_{nougat}$ = $\beta_{pluribus}$ = $\beta_{caramel}$ = $\beta_{crispedricewafer}$ = $\beta_{sugarpercent}$ = $\beta_{hard}$= $\beta_{fruity}$= $\beta_{peanutyalmondy}$ = 0, and conclude that peanutyalmondy is an important predictor and can not be dropped.
+
+We find that a model with both chocolate and peanutyalmondy as  predictors is required. We re-check all the assumptions and perform diagnostics for the selected reduced model:
+
+Beginning with checking leverages:
+
+```{r,warning=FALSE,message=FALSE}
+candy.final = lm(winpercent ~ chocolate + peanutyalmondy, data=Candy_Data_Subset)
+candy.final.leverages = lm.influence(candy.final)$hat
+n=dim(Candy_Data_Subset)[1]
+p2=length(variable.names(candy.final))
+candy.final.leverages.high = candy.final.leverages[candy.final.leverages>2*p2/n]
+candy.final.leverages.high
+```
+
+We find 14 observations with high leverage. We must check if these are good or bad high leverage points.
+
+```{r,warning=FALSE,message=FALSE}
+# Extract observations with high leverage points from the original data frame 
+candy.final.highlev = Candy_Data_Subset[candy.final.leverages>2*p2/n,]
+
+# Select only the observations with leverage points outside the range
+candy.final.highlev_lower = candy.final.highlev[candy.final.highlev$winpercent < vector_lim_win[1], ]
+candy.final.highlev_upper = candy.final.highlev[candy.final.highlev$winpercent > vector_lim_win[2], ]
+candy.final.highlev2 = rbind(candy.final.highlev_lower,candy.final.highlev_upper)
+candy.final.highlev2
+```
+
+We find two observations with bad high leverage (observations 52 and 53).
+
+Next we check for outliers:
+
+```{r,warning=FALSE,message=FALSE}
+candy.final.resid = rstudent(candy.final)
+candy.final.resid.sorted = sort(abs(candy.final.resid), decreasing=TRUE)[1:10]
+candy.final.resid.sorted
+
+bonferroni_cv = qt(.05/(2*n), n-p2-1) 
+bonferroni_cv
+```
+
+Even the largest studentized residual (at 2.55) is smaller than the bonferronu cv (3.55). Hence, no outliers are detected.
+
+Next, we test for influential observations:
+
+```{r,warning=FALSE,message=FALSE}
+candy.final.cooks = cooks.distance(candy.final)
+sort(candy.final.cooks, decreasing = TRUE)[1:10]
+```
+
+None of the cook's distances are greater than 1, and hence, we don't have any influential observations.
+
+Next, we perform model diagnostics to detect deviations from MLR assumptions, beginning with checking the variance of the residuals. We conduct the Breusch-Pagan (BP) Test.
+
+The hypothesis for the BP test is, 
+
+H0 :the variance is constant
+
+H$\alpha$: the variance is not constant
+
+```{r,warning=FALSE,message=FALSE}
+bptest(candy.final)
+```
+
+Since the p-value is 0.68 (> 0.05), we fail to reject the null and conclude that the variance is constant. 
+
+Next we check if the normality of residuals assumption is violated via the QQ plot and the KS test.
+
+```{r,warning=FALSE,message=FALSE}
+plot(candy.final,which=2)
+ks.test(candy.final$residuals,"pnorm")
+```
+
+The QQ plot does not indicate departure from normality as the points fall on a stratigh line, however the p-value less than 0.05 from the KS test suggests a departure from normality. So we attempt a tranformation to check if box-cox can fix normality.
+
+```{r,warning=FALSE,message=FALSE}
+Candy.final.transformation = boxcox(candy.final, lambda=seq(-2,2, length=400))
+```
+
+As 1 fall within the 95% confidence interval for lambda, we proceed without any transformations. 
+
+We do not need to check for independence of residuals as the data is not collected in an ordered sequence. We also need not check for linearity as both chocolate and peanutyalmondy are categorical predictors. Due to both predictors being categorical, we also need not check for collinearity in the predictors.
+
+\medskip
+\textbf{\textcolor{blue}{Model Application}}
+
+Our checks reveal that the selected reduced model can be used for estimation and prediction. We use estimation (confidence interval) here and not prediction interval, because the candies we select are a part of the training dataset
+
+```{r,warning=FALSE,message=FALSE}
+KitKat = Candy_Data_Subset[which(Candy_Data$competitorname=="Kit Kat"),]
+CandyCorn = Candy_Data_Subset[which(Candy_Data$competitorname=="Candy Corn"),]
+AlmondJoy = Candy_Data_Subset[which(Candy_Data$competitorname=="Almond Joy"),]
+predict.lm(candy.final,KitKat,interval = "confidence")
+predict.lm(candy.final,CandyCorn,interval = "confidence")
+predict.lm(candy.final,AlmondJoy,interval = "confidence")
+```
+
+We find that the win percent of Candy Corn (41.82%) which does not have chocoloat or peanuts/almonds is the least amongst the three selected candies. Next, Kit Kat which contains chocolate but not almonds, has a higher winpercent (58.45%) compared to Candy Corn. The candy with the highest win percent is Almond Joy (66.07%) which contains both chocolate and almonds/peanuts.
+
+\medskip
+\textbf{\textcolor{blue}{Model Interpretation}}
+
+To beta values of an MLR model reveal the influence of different predictors on the response. Hence, checking the beta for chocolate and peanutyalmondy in the selected model
+
+```{r,warning=FALSE,message=FALSE}
+summary(candy.final)
+```
+
+The result shows that the difference in the mean win percentage for two candies with and without the presence of chocolate as an ingredient is 16.625. Similarly, the difference in the mean win percentage for two candies with and without the presence of peanuts/almonds as an ingredient is 7.62. Hence, an ideal candy should have chocolate and peanuts/almonds as ingredients.
+
+\medskip
+\textbf{\textcolor{blue}{Conclusion}}
+
+In our quest of identifying the best features in a halloween candy we find that it should contain both chocolate and peanuts/almonds.Our finds were based on crucial steps including exploratory data analysis, model fitting, model diagonostics and model testing. 
+
