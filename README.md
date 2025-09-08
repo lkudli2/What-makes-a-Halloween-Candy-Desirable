@@ -1,7 +1,3 @@
-# What-makes-a-Halloween-Candy-Desirable
-This project explores which characteristics make Halloween candies more desirable. Using multiple regression analysis, it evaluates the impact of different attributes on consumer preference and refines the model to highlight the features that most strongly drive desirability.
----
-
 # 🎃 What Makes a Halloween Candy Desirable?
 
 **Authors:** Anav Vora & Lavanya Kudli
@@ -22,29 +18,43 @@ We apply **multiple linear regression** to examine the effect of these attribute
 
 ## Methods
 
-* Exploratory Data Analysis (EDA) to understand distributions.
-* Multiple Linear Regression (MLR) to model win percentage.
-* Diagnostics: leverage, Cook’s distance, residual plots, Breusch–Pagan test, Kolmogorov–Smirnov test, Q-Q plots.
-* Backward elimination and partial F-tests for feature selection.
+* **Exploratory Data Analysis (EDA):** Histograms and bar charts to understand distributions of each feature.
+* **Multiple Linear Regression (MLR):** Built a full model with all predictors (`R² = 0.44`, **F-test p < 1e-10**) to test overall significance.
+* **Diagnostics & Statistical Tests:** (see table below)
+* **Model Refinement:** Applied **backward selection** with **partial F-tests** to drop insignificant variables sequentially, ensuring each reduced model was statistically justified.
+
+## Statistical Tests Summary Table
+
+| **Test**                                           | **Purpose**                                                        | **Interpretation in this project**                                                          |
+| -------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| **Overall F-test (ANOVA)**                         | Tests if at least one predictor has a nonzero effect.              | p < 1e-10 → model is highly significant.                                                    |
+| **Leverage (2p/n rule)**                           | Identifies observations far from the mean of predictors.           | 3 high leverage points found, none problematic.                                             |
+| **Studentized Residuals + Bonferroni Correction**  | Detects outliers in response variable.                             | Largest residual < cutoff → no outliers.                                                    |
+| **Cook’s Distance**                                | Identifies influential points that can distort regression.         | All < 1 → no influential observations.                                                      |
+| **Breusch–Pagan Test**                             | Checks for constant variance (homoscedasticity).                   | p = 0.13 (full) and p = 0.68 (final) → variance constant.                                   |
+| **Kolmogorov–Smirnov Test (KS)**                   | Tests normality of residuals.                                      | p ≈ 4e-14 (full) and 2e-15 (final) → suggests non-normality, though diagnostics acceptable. |
+| **Q-Q Plot**                                       | Visual check of normality.                                         | Mostly linear with slight tail deviation.                                                   |
+| **Box–Cox Transformation**                         | Suggests if transformation needed to stabilize variance/normality. | λ \~ 1 within CI → no transformation needed.                                                |
+| **Linearity Check (Partial Residuals for Sugar%)** | Confirms continuous predictors relate linearly.                    | Scatter looked random → linearity holds.                                                    |
+| **Partial F-tests (Backward Selection)**           | Sequentially tests if removing variables is valid.                 | Insignificant predictors dropped step by step; chocolate + peanuts/almonds retained.        |
 
 ## Results
 
 * Full model: **R² = 0.44**, F-test p < 1e-10.
-* Reduced model identifies two significant predictors:
+* Final reduced model retained **chocolate** and **peanuts/almonds** as significant predictors:
 
   * **Chocolate**: +16.6% win rate.
   * **Peanuts/Almonds**: +7.6% win rate.
-* Other predictors (caramel, nougat, sugarpercent, etc.) were statistically insignificant after accounting for chocolate and nuts.
+* Other predictors (caramel, nougat, crispedricewafer, sugarpercent, etc.) were not significant.
 
 ## Conclusion
 
-An ideal Halloween candy contains **chocolate and peanuts/almonds**, which together explain a large portion of consumer preference. 
+An ideal Halloween candy contains **chocolate and peanuts/almonds**, which together explain a large portion of consumer preference. This project demonstrates how survey data and statistical modeling can provide **actionable insights** for consumer behavior and product design.
 
 ## Project Structure
 
 * **`candy-data.csv`** → Dataset (FiveThirtyEight Candy Power Ranking).
-* **`CS1_FA24_Anav_Lavanya_v2.Rmd`** → Main R Markdown file containing the full analysis, code, and results.
+* **`CS1_FA24_Anav_Lavanya_v2.Rmd`** → Main R Markdown file containing full analysis, code, and statistical tests.
 * **`CS1_FA24_Anav_Lavanya_v2.pdf`** → Compiled PDF report version of the project.
 * **`README.md`** → Project description and documentation.
 
----
