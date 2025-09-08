@@ -38,7 +38,7 @@ We apply **multiple linear regression** to examine the effect of these attribute
 
 ## Conclusion
 
-An ideal Halloween candy contains **chocolate and peanuts/almonds**, which together explain a large portion of consumer preference. This project demonstrates how survey data and statistical modeling can provide **actionable insights** for consumer behavior and product design.
+An ideal Halloween candy contains **chocolate and peanuts/almonds**, which together explain a large portion of consumer preference. 
 
 ## Project Structure
 
