@@ -48,5 +48,3 @@ An ideal Halloween candy contains **chocolate and peanuts/almonds**, which toget
 * **`README.md`** → Project description and documentation.
 
 ---
-
-Do you also want me to include a **“How to Reproduce” section** (just listing steps like install R, open `.Rmd`, knit to PDF/HTML), or should we keep it clean and minimal?
